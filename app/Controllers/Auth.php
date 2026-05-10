@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Models\ApplicationModel;
 
 class Auth extends BaseController
 {
@@ -18,14 +19,22 @@ class Auth extends BaseController
         } else {
             $inputEmail     = htmlspecialchars($this->request->getVar('inputEmail', FILTER_UNSAFE_RAW));
             $inputPassword  = htmlspecialchars($this->request->getVar('inputPassword', FILTER_UNSAFE_RAW));
-            $user           = $this->ApplicationModel->getUser(username: $inputEmail);
+            
+            // FIX: Instantiate the model locally to prevent lifecycle/initialization errors
+            $applicationModel = new ApplicationModel();
+            
+            // Note: The model uses 'username' as the parameter, but we pass the email from the login form
+            $user           = $applicationModel->getUser(username: $inputEmail);
+            
             if ($user) {
                 $password        = $user['password'];
                 $verify = password_verify($inputPassword, $password);
                 if ($verify) {
                     session()->set([
-                        'username'        => $user['username'],
-                        'role'            => $user['role'],
+                        'username'       => $user['username'],
+                        'email'          => $user['email'] ?? $user['username'],
+                        'role'           => $user['role_id'], // Uses role_id to prevent redirect loops
+                        'role_id'        => $user['role_id'], 
                         'isLoggedIn'     => TRUE
                     ]);
                     return redirect()->to(base_url('dashboard'));
@@ -39,9 +48,11 @@ class Auth extends BaseController
             }
         }
     }
+    
     public function logout()
     {
-        $this->session->destroy();
+        // Changed to the CI4 helper to avoid another potential property error
+        session()->destroy(); 
         return redirect()->to(base_url('/'));
     }
 
@@ -61,7 +72,7 @@ class Auth extends BaseController
     public function registration()
     {
         if (!$this->validate([
-            'inputEmail'     => ['label' => 'Email', 'rules' => 'is_unique[users.username]'],
+            'inputEmail'     => ['label' => 'Email', 'rules' => 'is_unique[users.email]'],
             'inputPassword'  => ['label' => 'Password', 'rules' => 'required'],
             'inputPassword2' => ['label' => 'Password Confirmation', 'rules' => 'matches[inputPassword]'],
         ])) {
@@ -75,13 +86,19 @@ class Auth extends BaseController
             $inputFullname = htmlspecialchars($this->request->getVar('inputFullname', FILTER_UNSAFE_RAW));
             $inputEmail    = htmlspecialchars($this->request->getVar('inputEmail', FILTER_UNSAFE_RAW));
             $inputPassword = htmlspecialchars($this->request->getVar('inputPassword', FILTER_UNSAFE_RAW));
+            
             $dataUser      = [
                 'inputFullname' => $inputFullname,
-                'inputUsername' => $inputEmail,
+                'inputUsername' => $inputEmail, 
+                'inputEmail'    => $inputEmail, 
                 'inputPassword' => $inputPassword,
-                'inputRole'     => 1
+                'inputRole'     => 1            
             ];
-            $this->ApplicationModel->createUser($dataUser);
+            
+            // FIX: Instantiate the model locally here as well
+            $applicationModel = new ApplicationModel();
+            $applicationModel->createUser($dataUser);
+            
             session()->setFlashdata('notif_success', '<b>Registration Successfully!</b> Please login with your account.');
             return view('pages/commons/login');
         }

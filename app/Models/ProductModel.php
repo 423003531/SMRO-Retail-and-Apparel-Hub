@@ -10,10 +10,20 @@ class ProductModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
-    // We enable soft deletes here so if you delete a product, it hides it instead of wiping it out completely
-    protected $useSoftDeletes   = true; 
-    protected $protectFields    = true;
-    protected $allowedFields    = ['name', 'description', 'base_image'];
+    
+    // Enabling Soft Deletes because of your deleted_at column!
+    protected $useSoftDeletes   = true;
+    
+    // Merged your existing columns + the new retail columns
+    protected $allowedFields    = [
+        'sku', 'name', 'description', 'base_image', 'category', 
+        'selling_price', 'cost_price', 'sizes', 'colors', 
+        'supplier', 'total_stock', 'status'
+    ];
 
+    // Timestamps
     protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+    protected $deletedField  = 'deleted_at';
 }

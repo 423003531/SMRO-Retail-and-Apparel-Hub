@@ -10,9 +10,20 @@ class ProductVariantModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
-    protected $protectFields    = true;
-    protected $allowedFields    = ['product_id', 'sku', 'size', 'color', 'price', 'stock_quantity'];
+    
+    // These are the exact columns we just created in the migration
+    protected $allowedFields    = [
+        'product_id',
+        'sku',
+        'size',
+        'color',
+        'price',
+        'stock_quantity'
+    ];
 
+    // Enable automatic timestamps so CodeIgniter fills in created_at and updated_at
     protected $useTimestamps = true;
+    protected $dateFormat    = 'datetime';
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 }

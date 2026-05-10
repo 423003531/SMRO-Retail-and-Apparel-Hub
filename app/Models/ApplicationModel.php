@@ -169,9 +169,11 @@ class ApplicationModel extends Model
      */
     public function createUser($dataUser)
     {
+        // FIX: Added 'email' to explicitly insert the email data into the database
         return $this->db->table('users')->insert([
             'fullname'    => $dataUser['inputFullname'],
             'username'    => $dataUser['inputUsername'],
+            'email'       => $dataUser['inputEmail'], // Maps inputEmail properly
             'password'    => password_hash($dataUser['inputPassword'], PASSWORD_DEFAULT),
             'role'        => $dataUser['inputRole'],
             'created_at'  => date('Y-m-d h:i:s')
@@ -192,12 +194,20 @@ class ApplicationModel extends Model
             $user         = $this->getUser(userID: $dataUser['userID']);
             $password     = $user['password'];
         }
-        return $this->db->table('users')->update([
-            'fullname'        => $dataUser['inputFullname'],
+        
+        // FIX: Ensure email is also updated if provided
+        $updateData = [
+            'fullname'         => $dataUser['inputFullname'],
             'username'         => $dataUser['inputUsername'],
             'password'         => $password,
             'role'             => $dataUser['inputRole'],
-        ], ['id' => $dataUser['userID']]);
+        ];
+        
+        if (isset($dataUser['inputEmail'])) {
+            $updateData['email'] = $dataUser['inputEmail'];
+        }
+
+        return $this->db->table('users')->update($updateData, ['id' => $dataUser['userID']]);
     }
 
     /**
