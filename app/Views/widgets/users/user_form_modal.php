@@ -25,7 +25,7 @@
                         <select name="inputRole" id="inputRole" class="form-control" required>
                             <option value="">-- Choose User Role --</option>
                             <?php foreach ($UserRole as $userRole) : ?>
-                                <option value="<?= $userRole['id']; ?>"><?= $userRole['role_name']; ?></option>
+                                <option value="<?= $userRole['id'] ?? ''; ?>"><?= $userRole['role_name'] ?? 'Unknown Role'; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

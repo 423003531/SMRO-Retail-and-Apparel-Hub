@@ -18,6 +18,20 @@
     </div>
 <?php endif; ?>
 
+<!-- Search Bar -->
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="<?= base_url('products') ?>" class="row g-2 align-items-center">
+            <div class="col-md-10">
+                <input type="text" name="search" class="form-control" placeholder="Search by name, SKU, or category..." value="<?= esc($search) ?>">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -25,7 +39,7 @@
                 <thead class="bg-light">
                     <tr>
                         <th>SKU</th>
-                        <th>Image</th> 
+                        <th>Image</th>
                         <th>Product</th>
                         <th>Category</th>
                         <th>Sizes</th>
@@ -41,23 +55,22 @@
                         <?php foreach ($products as $product): ?>
                             <tr>
                                 <td class="text-muted"><small><?= esc($product['sku']); ?></small></td>
-                                
                                 <td>
-                                    <?php if (!empty($product['base_image'])): ?> <img src="<?= base_url('uploads/products/' . esc($product['base_image'])) ?>" alt="<?= esc($product['name']) ?>" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
+                                    <?php if (!empty($product['base_image'])): ?>
+                                        <img src="<?= base_url('uploads/products/' . esc($product['base_image'])) ?>" alt="<?= esc($product['name']) ?>" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
                                     <?php else: ?>
                                         <div class="bg-light text-muted border rounded d-flex justify-content-center align-items-center" style="width: 50px; height: 50px; font-size: 0.7rem;">
                                             No Img
                                         </div>
                                     <?php endif; ?>
                                 </td>
-
                                 <td><strong><?= esc($product['name']); ?></strong></td>
                                 <td><?= esc($product['category']); ?></td>
                                 <td>
-                                    <?php 
+                                    <?php
                                         $sizes = explode(',', $product['sizes']);
-                                        foreach($sizes as $size) {
-                                            if(trim($size) !== '') {
+                                        foreach ($sizes as $size) {
+                                            if (trim($size) !== '') {
                                                 echo '<span class="badge bg-secondary me-1">' . esc(trim($size)) . '</span>';
                                             }
                                         }
@@ -81,9 +94,8 @@
                                 </td>
                                 <td>
                                     <a href="<?= base_url('products/edit/' . $product['id']); ?>" class="btn btn-sm btn-info text-white">Edit</a>
-                                    
-                                    <a href="<?= base_url('products/delete/' . $product['id']); ?>" 
-                                       class="btn btn-sm btn-danger" 
+                                    <a href="<?= base_url('products/delete/' . $product['id']); ?>"
+                                       class="btn btn-sm btn-danger"
                                        onclick="return confirm('Are you sure you want to delete this product?');">
                                        Delete
                                     </a>
@@ -93,8 +105,13 @@
                     <?php else: ?>
                         <tr>
                             <td colspan="10" class="text-center py-5 text-muted">
-                                <h5>No products found.</h5>
-                                <p>Click "+ Add Product" to start building your inventory.</p>
+                                <?php if ($search): ?>
+                                    <h5>No products found for "<?= esc($search) ?>".</h5>
+                                    <a href="<?= base_url('products') ?>">Clear search</a>
+                                <?php else: ?>
+                                    <h5>No products found.</h5>
+                                    <p>Click "+ Add Product" to start building your inventory.</p>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endif; ?>
@@ -102,5 +119,13 @@
             </table>
         </div>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($pager): ?>
+        <div class="card-footer bg-white">
+            <?= $pager->links() ?>
+        </div>
+    <?php endif; ?>
 </div>
+
 <?= $this->endSection(); ?>

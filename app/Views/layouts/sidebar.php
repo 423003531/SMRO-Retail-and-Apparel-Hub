@@ -1,46 +1,57 @@
 <nav id="sidebar" class="sidebar js-sidebar">
     <div class="sidebar-content js-simplebar">
         <a class="sidebar-brand" href="<?= base_url(); ?> ">
-            <span class="align-middle"><i>Starter Panel</i></span>
+            <span class="align-middle"><i>Thread</i></span>
         </a>
         <ul class="sidebar-nav">
-            <?php foreach ($MenuCategory as $mCategory) : ?>
-                <li class="sidebar-header">
-                    <?= $mCategory['menu_category']; ?>
-                </li>
-                <?php
-                $Menu = getMenu($mCategory['menuCategoryID'], $user['role']);
-                foreach ($Menu as $menu) :
-                    if ($menu['parent'] == 0) :
-                ?>
-                        <li class="sidebar-item <?= ($segment == $menu['url']) ? 'active' : ''; ?>">
-                            <a class="sidebar-link" href="<?= base_url($menu['url']); ?> ">
-                                <i class="align-middle" data-feather="<?= $menu['icon']; ?>"></i> <span class="align-middle"><?= $menu['title']; ?></span>
-                            </a>
-                        </li>
-                    <?php
-                    else :
-                        $SubMenu =  getSubMenu($menu['menu_id'], $user['role']);
-                    ?>
-                        <li class="sidebar-item <?= ($segment == $menu['url']) ? 'active' : ''; ?>">
-                            <a data-bs-target="#<?= $menu['url'] ?>" data-bs-toggle="collapse" class="sidebar-link collapsed" aria-expanded="<?= ($segment == $menu['url']) ? 'true' : 'false'; ?>">
-                                <i class="align-middle" data-feather="<?= $menu['icon']; ?>"></i> <span class="align-middle"><?= $menu['title']; ?></span>
-                            </a>
-                            <ul id="<?= $menu['url'] ?>" class="sidebar-dropdown list-unstyled collapse <?= ($segment == $menu['url']) ? ' show' : ''; ?> " data-bs-parent="#sidebar">
-                                <?php foreach ($SubMenu as $subMenu) : ?>
-                                    <li class="sidebar-item <?= ($subsegment == $subMenu['url']) ? 'active' : ''; ?>">
-                                        <a class="sidebar-link" href="<?= base_url($menu['url'] . '/' . $subMenu['url']); ?>">
-                                            <?= $subMenu['title']; ?>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </li>
-                <?php
-                    endif;
-                endforeach;
-                ?>
-            <?php endforeach; ?>
+            
+            <li class="sidebar-header">
+                Main
+            </li>
+            
+            <li class="sidebar-item <?= url_is('dashboard*') || url_is('/') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('dashboard'); ?>">
+                    <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Dashboard</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">
+                Catalog
+            </li>
+            <li class="sidebar-item <?= url_is('products*') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('products'); ?>">
+                    <i class="align-middle" data-feather="box"></i> <span class="align-middle">Products</span>
+                </a>
+            </li>
+            <li class="sidebar-item <?= url_is('inventory*') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('inventory'); ?>">
+                    <i class="align-middle" data-feather="clipboard"></i> <span class="align-middle">Stock Ledger</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">
+                Sales
+            </li>
+            <li class="sidebar-item <?= url_is('pos*') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('pos'); ?>">
+                    <i class="align-middle" data-feather="shopping-cart"></i> <span class="align-middle">Point of Sale</span>
+                </a>
+            </li>
+            <li class="sidebar-item <?= url_is('sales*') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('sales'); ?>">
+                    <i class="align-middle" data-feather="file-text"></i> <span class="align-middle">Sales History</span>
+                </a>
+            </li>
+
+            <li class="sidebar-header">
+                System
+            </li>
+            <li class="sidebar-item <?= url_is('users*') ? 'active' : ''; ?>">
+                <a class="sidebar-link" href="<?= base_url('users'); ?>">
+                    <i class="align-middle" data-feather="settings"></i> <span class="align-middle">Settings</span>
+                </a>
+            </li>
+
         </ul>
     </div>
 </nav>

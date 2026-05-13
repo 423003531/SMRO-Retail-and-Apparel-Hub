@@ -24,10 +24,10 @@
                                 <tr>
                                     <td><?= $users['fullname']; ?></td>
                                     <td class="d-none d-md-table-cell"><?= $users['username']; ?></td>
-                                    <td><span class="badge bg-success"><?= $users['role_name']; ?></span></td>
+                                    <td><span class="badge bg-success"><?= $users['role_name'] ?? 'User'; ?></span></td>
                                     <td><?= $users['created_at']; ?></td>
                                     <td>
-                                        <button class="btn btn-info btn-sm btnEdit" data-bs-toggle="modal" data-bs-target="#formUserModal" data-id="<?= $users['userID']; ?>" data-fullname="<?= $users['fullname']; ?>" data-username="<?= $users['username']; ?>" data-role="<?= $users['role']; ?>">Update</button>
+                                        <button class="btn btn-info btn-sm btnEdit" data-bs-toggle="modal" data-bs-target="#formUserModal" data-id="<?= $users['userID']; ?>" data-fullname="<?= $users['fullname']; ?>" data-username="<?= $users['username']; ?>" data-role="<?= $users['role'] ?? ''; ?>">Update</button>
 
                                         <?php if ($users['username'] != session()->get('username')) : ?>
                                             <form action="<?= base_url('users/delete-user/' . $users['userID']); ?>" method="post" class="d-inline">
@@ -61,10 +61,10 @@
                         <tbody>
                             <?php foreach ($UserRole as $userRole) : ?>
                                 <tr>
-                                    <td><?= $userRole['role_name']; ?></td>
+                                    <td><?= $userRole['role_name'] ?? 'Role'; ?></td>
                                     <td><a href="<?= base_url('users/role-access?role=' . $userRole['id']); ?>"> <span class="badge bg-primary">Access Menu</span></a></td>
                                     <td>
-                                        <button class="btn btn-info btn-sm btnEditRole" data-bs-toggle="modal" data-bs-target="#formRoleModal" data-id="<?= $userRole['id']; ?>" data-role="<?= $userRole['role_name']; ?>">Update</button>
+                                        <button class="btn btn-info btn-sm btnEditRole" data-bs-toggle="modal" data-bs-target="#formRoleModal" data-id="<?= $userRole['id']; ?>" data-role="<?= $userRole['role_name'] ?? ''; ?>">Update</button>
                                         <form action="<?= base_url('users/delete-role/' . $userRole['id']); ?>" method="post" class="d-inline">
                                             <input type="hidden" name="_method" value="DELETE">
                                             <button type="submit" class="btn btn-outline-danger btn-sm">

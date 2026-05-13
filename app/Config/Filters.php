@@ -74,7 +74,21 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             'isLoggedIn' => ['except' => ['/', 'register', 'login']],
-            'isGranted'  => ['except' => ['/', 'register', 'login', 'logout', 'blocked', 'dashboard', 'products', 'products/create', 'products/store', 'products/delete/*', 'products/edit/*', 'products/update/*']],
+            
+            // --- UPDATED: Added exceptions so you don't get locked out of your own menus! ---
+            'isGranted'  => ['except' => [
+                '/', 'register', 'login', 'logout', 'blocked', 'dashboard', 
+                'products', 'products/create', 'products/store', 'products/delete/*', 'products/edit/*', 'products/update/*',
+                'inventory',             // Grants access to Stock Ledger
+                'inventory/*',           // Grants access to inventory actions like adjusting stock
+                'pos',                   // Grants access to Point of Sale
+                'pos/*',                 // Grants access to Point of Sale actions
+                'menu-management',       // Grants access to Menu Settings
+                'menu-management/*', 
+                'users',                 // Grants access to Role Settings
+                'users/*'
+            ]],
+            
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',

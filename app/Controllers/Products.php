@@ -3,18 +3,33 @@
 namespace App\Controllers;
 
 use App\Models\ProductModel;
-use App\Models\ProductVariantModel; // Added Variant Model
+use App\Models\ProductVariantModel;
+use App\Models\StockLogModel;
 
 class Products extends BaseController
 {
     public function index()
     {
         $productModel = new ProductModel();
-        $allProducts = $productModel->findAll();
+
+        $search  = $this->request->getGet('search') ?? '';
+        $perPage = 10;
+
+        if ($search) {
+            $products = $productModel
+                ->like('name', $search)
+                ->orLike('sku', $search)
+                ->orLike('category', $search)
+                ->paginate($perPage, 'default');
+        } else {
+            $products = $productModel->paginate($perPage, 'default');
+        }
 
         $data = array_merge($this->data, [
             'title'    => 'Products Management',
-            'products' => $allProducts
+            'products' => $products,
+            'pager'    => $productModel->pager,
+            'search'   => $search
         ]);
 
         return view('pages/products/index', $data);
@@ -31,7 +46,6 @@ class Products extends BaseController
 
     public function store()
     {
-        // Removed 'total_stock' from required rules
         $rules = [
             'sku'           => 'required|min_length[2]|is_unique[products.sku]',
             'name'          => 'required|min_length[3]',
@@ -44,31 +58,29 @@ class Products extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        // --- IMAGE UPLOAD LOGIC ---
-        $imageName = null; 
+        $imageName = null;
         $file = $this->request->getFile('image');
-        
+
         if ($file && $file->isValid() && !$file->hasMoved()) {
             $imageName = $file->getRandomName();
             $file->move('uploads/products', $imageName);
         }
 
-        // --- CALCULATE TOTALS FROM VARIANTS ---
-        $variants = $this->request->getPost('variants');
-        $totalStock = 0;
-        $sizesArray = [];
+        $variants    = $this->request->getPost('variants');
+        $totalStock  = 0;
+        $sizesArray  = [];
         $colorsArray = [];
 
         if ($variants) {
             foreach ($variants as $v) {
                 $totalStock += (int)$v['stock_quantity'];
-                if (!empty($v['size'])) $sizesArray[] = $v['size'];
+                if (!empty($v['size']))  $sizesArray[]  = $v['size'];
                 if (!empty($v['color'])) $colorsArray[] = $v['color'];
             }
         }
 
         $productModel = new ProductModel();
-        
+
         $saveData = [
             'sku'           => $this->request->getPost('sku'),
             'name'          => $this->request->getPost('name'),
@@ -77,20 +89,30 @@ class Products extends BaseController
             'cost_price'    => $this->request->getPost('cost_price'),
             'sizes'         => implode(', ', array_unique($sizesArray)),
             'colors'        => implode(', ', array_unique($colorsArray)),
-            'total_stock'   => $totalStock, // Auto-calculated!
+            'total_stock'   => $totalStock,
             'status'        => $this->request->getPost('status') ?? 'Active',
             'base_image'    => $imageName,
         ];
 
-        // Insert returns the new product's ID
         $productId = $productModel->insert($saveData, true);
 
-        // --- SAVE VARIANTS ---
         if ($productId && $variants) {
-            $variantModel = new ProductVariantModel();
+            $variantModel  = new ProductVariantModel();
+            $stockLogModel = new StockLogModel();
+
             foreach ($variants as $variant) {
-                $variant['product_id'] = $productId; // Link it to the main product
-                $variantModel->insert($variant);
+                $variant['product_id'] = $productId;
+                $variantId = $variantModel->insert($variant, true);
+
+                if ((int)$variant['stock_quantity'] > 0) {
+                    $stockLogModel->insert([
+                        'product_id'    => $productId,
+                        'variant_id'    => $variantId,
+                        'movement_type' => 'in',
+                        'quantity'      => (int)$variant['stock_quantity'],
+                        'remarks'       => 'Initial stock from product creation'
+                    ]);
+                }
             }
         }
 
@@ -100,23 +122,15 @@ class Products extends BaseController
     public function delete($id)
     {
         $productModel = new ProductModel();
-        
-        // 1. Find the product first to get the image filename
         $product = $productModel->find($id);
-        
-        // 2. Check if the product exists and actually has an image
+
         if ($product && !empty($product['base_image'])) {
-            // FCPATH points to your public folder path
             $imagePath = FCPATH . 'uploads/products/' . $product['base_image'];
-            
-            // 3. If the file exists on the server, delete it
             if (is_file($imagePath)) {
                 unlink($imagePath);
             }
         }
 
-        // 4. Delete the product from the database
-        // NOTE: Variants will delete automatically because of ON DELETE CASCADE in the database
         $productModel->delete($id);
 
         return redirect()->to('products')->with('success', 'Product and its image deleted successfully!');
@@ -125,16 +139,15 @@ class Products extends BaseController
     public function edit($id)
     {
         $productModel = new ProductModel();
-        $product = $productModel->find($id);
+        $product      = $productModel->find($id);
 
-        // Fetch attached variants
         $variantModel = new ProductVariantModel();
-        $variants = $variantModel->where('product_id', $id)->findAll();
+        $variants     = $variantModel->where('product_id', $id)->findAll();
 
         $data = array_merge($this->data, [
             'title'    => 'Edit Product',
             'product'  => $product,
-            'variants' => $variants // Pass variants to the view
+            'variants' => $variants
         ]);
 
         return view('pages/products/edit', $data);
@@ -142,9 +155,8 @@ class Products extends BaseController
 
     public function update($id)
     {
-        // Removed 'total_stock' from required rules
         $rules = [
-            'sku'           => "required|min_length[2]|is_unique[products.sku,id,{$id}]", 
+            'sku'           => "required|min_length[2]|is_unique[products.sku,id,{$id}]",
             'name'          => 'required|min_length[3]',
             'category'      => 'required',
             'selling_price' => 'required|numeric',
@@ -156,18 +168,17 @@ class Products extends BaseController
         }
 
         $productModel = new ProductModel();
-        $oldProduct = $productModel->find($id);
-        
-        // --- CALCULATE TOTALS FROM VARIANTS ---
-        $variants = $this->request->getPost('variants');
-        $totalStock = 0;
-        $sizesArray = [];
+        $oldProduct   = $productModel->find($id);
+
+        $variants    = $this->request->getPost('variants');
+        $totalStock  = 0;
+        $sizesArray  = [];
         $colorsArray = [];
 
         if ($variants) {
             foreach ($variants as $v) {
                 $totalStock += (int)$v['stock_quantity'];
-                if (!empty($v['size'])) $sizesArray[] = $v['size'];
+                if (!empty($v['size']))  $sizesArray[]  = $v['size'];
                 if (!empty($v['color'])) $colorsArray[] = $v['color'];
             }
         }
@@ -180,21 +191,17 @@ class Products extends BaseController
             'cost_price'    => $this->request->getPost('cost_price'),
             'sizes'         => implode(', ', array_unique($sizesArray)),
             'colors'        => implode(', ', array_unique($colorsArray)),
-            'total_stock'   => $totalStock, // Auto-calculated!
+            'total_stock'   => $totalStock,
             'status'        => $this->request->getPost('status') ?? 'Active',
         ];
 
-        // --- IMAGE UPLOAD LOGIC FOR UPDATE ---
         $file = $this->request->getFile('image');
-        
-        // If a new valid file is uploaded
+
         if ($file && $file->isValid() && !$file->hasMoved()) {
             $imageName = $file->getRandomName();
             $file->move('uploads/products', $imageName);
-            
             $updateData['base_image'] = $imageName;
 
-            // CLEANUP: Delete the old image file from the server
             if (!empty($oldProduct['base_image'])) {
                 $oldImagePath = FCPATH . 'uploads/products/' . $oldProduct['base_image'];
                 if (is_file($oldImagePath)) {
@@ -205,17 +212,66 @@ class Products extends BaseController
 
         $productModel->update($id, $updateData);
 
-        // --- SYNC VARIANTS ---
-        $variantModel = new ProductVariantModel();
-        
-        // 1. Delete all old variants for this product
-        $variantModel->where('product_id', $id)->delete();
-        
-        // 2. Insert the newly submitted ones
+        $variantModel  = new ProductVariantModel();
+        $stockLogModel = new StockLogModel();
+
+        $oldVariants    = $variantModel->where('product_id', $id)->findAll();
+        $oldVariantsMap = [];
+        foreach ($oldVariants as $ov) {
+            $oldVariantsMap[$ov['sku']] = $ov;
+        }
+
+        $processedSkus = [];
+
         if ($variants) {
             foreach ($variants as $variant) {
-                $variant['product_id'] = $id; // Keep them linked to this product
-                $variantModel->insert($variant);
+                $variant['product_id'] = $id;
+                $sku = $variant['sku'];
+                $processedSkus[] = $sku;
+
+                if (isset($oldVariantsMap[$sku])) {
+                    $oldVariant = $oldVariantsMap[$sku];
+                    $variantId  = $oldVariant['id'];
+                    $variantModel->update($variantId, $variant);
+
+                    $diff = (int)$variant['stock_quantity'] - (int)$oldVariant['stock_quantity'];
+                    if ($diff !== 0) {
+                        $stockLogModel->insert([
+                            'product_id'    => $id,
+                            'variant_id'    => $variantId,
+                            'movement_type' => $diff > 0 ? 'in' : 'out',
+                            'quantity'      => abs($diff),
+                            'remarks'       => 'Stock adjusted via product edit'
+                        ]);
+                    }
+                } else {
+                    $variantId = $variantModel->insert($variant, true);
+                    if ((int)$variant['stock_quantity'] > 0) {
+                        $stockLogModel->insert([
+                            'product_id'    => $id,
+                            'variant_id'    => $variantId,
+                            'movement_type' => 'in',
+                            'quantity'      => (int)$variant['stock_quantity'],
+                            'remarks'       => 'New variant added via product edit'
+                        ]);
+                    }
+                }
+            }
+        }
+
+        foreach ($oldVariantsMap as $sku => $ov) {
+            if (!in_array($sku, $processedSkus)) {
+                $variantModel->delete($ov['id']);
+
+                if ((int)$ov['stock_quantity'] > 0) {
+                    $stockLogModel->insert([
+                        'product_id'    => $id,
+                        'variant_id'    => $ov['id'],
+                        'movement_type' => 'out',
+                        'quantity'      => (int)$ov['stock_quantity'],
+                        'remarks'       => 'Variant deleted from catalog'
+                    ]);
+                }
             }
         }
 
